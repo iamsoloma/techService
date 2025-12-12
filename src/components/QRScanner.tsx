@@ -3,7 +3,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { X, Camera, Keyboard } from 'lucide-react';
+import { X, Camera, Keyboard, ScanLine } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 interface QRScannerProps {
@@ -13,6 +13,7 @@ interface QRScannerProps {
 
 export function QRScanner({ onScan, onClose }: QRScannerProps) {
   const [manualInput, setManualInput] = useState('');
+  const [isScanning, setIsScanning] = useState(false);
 
   const handleManualSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,6 +55,24 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
     onScan(mockData[type as keyof typeof mockData]);
   };
 
+  const handleStartScanning = () => {
+    setIsScanning(true);
+    // Симуляция сканирования QR-кода через 3 секунды
+    setTimeout(() => {
+      const mockQRData = {
+        name: 'Насос ЦН-500',
+        type: 'Центробежный насос',
+        location: 'Цех №5, участок А',
+        serialNumber: `QR-${Math.floor(Math.random() * 9000) + 1000}`,
+        manufacturer: 'ООО "Насосмаш"',
+        installDate: new Date().toISOString().split('T')[0],
+        operatingHours: 0,
+      };
+      onScan(JSON.stringify(mockQRData));
+      setIsScanning(false);
+    }, 3000);
+  };
+
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader>
@@ -64,7 +83,7 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
               Добавление оборудования по QR-коду
             </CardTitle>
             <CardDescription>
-              Введите данные вручную или выберите шаблон
+              Сканируйте QR-код, введите данные вручную или выберите шаблон
             </CardDescription>
           </div>
           <Button variant="ghost" size="sm" onClick={onClose}>
@@ -73,8 +92,12 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
         </div>
       </CardHeader>
       <CardContent>
-        <Tabs defaultValue="manual" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+        <Tabs defaultValue="camera" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="camera">
+              <ScanLine className="w-4 h-4 mr-2" />
+              Сканировать
+            </TabsTrigger>
             <TabsTrigger value="manual">
               <Keyboard className="w-4 h-4 mr-2" />
               Ручной ввод
@@ -84,6 +107,84 @@ export function QRScanner({ onScan, onClose }: QRScannerProps) {
               Шаблоны
             </TabsTrigger>
           </TabsList>
+
+          <TabsContent value="camera" className="space-y-4">
+            <div className="relative bg-black rounded-lg overflow-hidden aspect-video flex items-center justify-center">
+              {!isScanning ? (
+                <div className="text-center space-y-4">
+                  <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center mx-auto">
+                    <Camera className="w-10 h-10 text-white" />
+                  </div>
+                  <p className="text-white text-sm">Нажмите кнопку для запуска камеры</p>
+                </div>
+              ) : (
+                <div className="relative w-full h-full flex items-center justify-center">
+                  {/* Имитация видео камеры */}
+                  <div className="absolute inset-0 bg-gradient-to-br from-gray-800 via-gray-700 to-gray-900">
+                    <div className="absolute inset-0 opacity-20" 
+                         style={{
+                           backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,0.03) 2px, rgba(255,255,255,0.03) 4px)',
+                         }}>
+                    </div>
+                  </div>
+                  
+                  {/* Рамка для сканирования */}
+                  <div className="relative z-10 w-64 h-64">
+                    {/* Затемнение фона вокруг рамки */}
+                    <div className="absolute -inset-32 border-[200px] border-black/60 pointer-events-none"></div>
+                    
+                    {/* Углы рамки */}
+                    <div className="absolute top-0 left-0 w-12 h-12 border-t-4 border-l-4 border-green-400"></div>
+                    <div className="absolute top-0 right-0 w-12 h-12 border-t-4 border-r-4 border-green-400"></div>
+                    <div className="absolute bottom-0 left-0 w-12 h-12 border-b-4 border-l-4 border-green-400"></div>
+                    <div className="absolute bottom-0 right-0 w-12 h-12 border-b-4 border-r-4 border-green-400"></div>
+                    
+                    {/* Анимированная линия сканирования */}
+                    <div className="absolute inset-0 overflow-hidden">
+                      <div className="absolute left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-green-400 to-transparent animate-scan"></div>
+                    </div>
+                    
+                    {/* Текст подсказка */}
+                    <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 whitespace-nowrap">
+                      <p className="text-white text-sm flex items-center gap-2">
+                        <span className="inline-block w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                        Сканирование QR-кода...
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-3">
+              {!isScanning ? (
+                <Button 
+                  onClick={handleStartScanning} 
+                  className="w-full h-12"
+                  size="lg"
+                >
+                  <ScanLine className="w-5 h-5 mr-2" />
+                  Начать сканирование
+                </Button>
+              ) : (
+                <Button 
+                  onClick={() => setIsScanning(false)} 
+                  variant="outline"
+                  className="w-full h-12"
+                  size="lg"
+                >
+                  Отменить сканирование
+                </Button>
+              )}
+              
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-900">
+                  <strong>Инструкция:</strong> Расположите QR-код в центре рамки. 
+                  Сканирование произойдет автоматически при обнаружении кода.
+                </p>
+              </div>
+            </div>
+          </TabsContent>
 
           <TabsContent value="manual" className="space-y-4">
             <form onSubmit={handleManualSubmit} className="space-y-4">

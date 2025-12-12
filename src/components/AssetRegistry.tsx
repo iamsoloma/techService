@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Search, Filter, Eye, CheckCircle, XCircle, QrCode, Plus } from 'lucide-react';
 import { QRScanner } from './QRScanner';
+import { EquipmentInfoDialog } from './EquipmentInfoDialog';
 import { Textarea } from './ui/textarea';
 
 interface MaintenanceRecord {
@@ -127,15 +128,15 @@ const mockEquipment: Equipment[] = [
 ];
 
 export function AssetRegistry() {
-  const [equipment, setEquipment] = useState<Equipment[]>(mockEquipment);
+  const [equipmentList, setEquipmentList] = useState<Equipment[]>(mockEquipment);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [isScanning, setIsScanning] = useState(false);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [newEquipment, setNewEquipment] = useState({
+  const [isInfoDialogOpen, setIsInfoDialogOpen] = useState(false);
+  const [scannedEquipmentData, setScannedEquipmentData] = useState({
     name: '',
     type: '',
     location: '',
@@ -145,9 +146,9 @@ export function AssetRegistry() {
     operatingHours: 0,
   });
 
-  const uniqueTypes = Array.from(new Set(equipment.map((e) => e.type)));
+  const uniqueTypes = Array.from(new Set(equipmentList.map((e) => e.type)));
 
-  const filteredEquipment = equipment.filter((item) => {
+  const filteredEquipment = equipmentList.filter((item) => {
     const matchesSearch =
       item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.location.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -159,7 +160,7 @@ export function AssetRegistry() {
 
   const handleViewEquipment = (item: Equipment) => {
     setSelectedEquipment(item);
-    setIsDialogOpen(true);
+    setIsViewDialogOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -195,7 +196,7 @@ export function AssetRegistry() {
     try {
       // Парсим данные из QR-кода (предполагаем JSON формат)
       const qrData = JSON.parse(data);
-      setNewEquipment({
+      setScannedEquipmentData({
         name: qrData.name || '',
         type: qrData.type || '',
         location: qrData.location || '',
@@ -204,29 +205,34 @@ export function AssetRegistry() {
         installDate: qrData.installDate || new Date().toISOString().split('T')[0],
         operatingHours: qrData.operatingHours || 0,
       });
-      setIsAddDialogOpen(true);
+      setIsInfoDialogOpen(true);
     } catch (error) {
       // Если не JSON, используем данные как серийный номер
-      setNewEquipment({
-        ...newEquipment,
+      setScannedEquipmentData({
+        name: '',
+        type: '',
+        location: '',
         serialNumber: data,
+        manufacturer: '',
+        installDate: new Date().toISOString().split('T')[0],
+        operatingHours: 0,
       });
-      setIsAddDialogOpen(true);
+      setIsInfoDialogOpen(true);
     }
   };
 
-  const handleAddEquipment = () => {
-    const equipment: Equipment = {
-      id: Math.max(...equipment.map(e => e.id)) + 1,
-      ...newEquipment,
+  const handleSaveEquipment = (data: typeof scannedEquipmentData) => {
+    const newEquipment: Equipment = {
+      id: equipmentList.length > 0 ? Math.max(...equipmentList.map(e => e.id)) + 1 : 1,
+      ...data,
       status: 'working',
       lastMaintenance: new Date().toISOString().split('T')[0],
       nextMaintenance: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       maintenanceHistory: [],
     };
-    setEquipment([...equipment, equipment]);
-    setIsAddDialogOpen(false);
-    setNewEquipment({
+    setEquipmentList([...equipmentList, newEquipment]);
+    setIsInfoDialogOpen(false);
+    setScannedEquipmentData({
       name: '',
       type: '',
       location: '',
@@ -265,7 +271,7 @@ export function AssetRegistry() {
                 <QrCode className="w-4 h-4 mr-2" />
                 Сканировать QR
               </Button>
-              <Button onClick={() => setIsAddDialogOpen(true)}>
+              <Button onClick={() => setIsInfoDialogOpen(true)}>
                 <Plus className="w-4 h-4 mr-2" />
                 Добавить оборудование
               </Button>
@@ -352,93 +358,13 @@ export function AssetRegistry() {
         </CardContent>
       </Card>
 
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Добавление нового оборудования</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="eq-name">Название оборудования</Label>
-                <Input
-                  id="eq-name"
-                  placeholder="Например: Насос ЦН-400"
-                  value={newEquipment.name}
-                  onChange={(e) => setNewEquipment({ ...newEquipment, name: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="eq-type">Тип оборудования</Label>
-                <Input
-                  id="eq-type"
-                  placeholder="Например: Центробежный насос"
-                  value={newEquipment.type}
-                  onChange={(e) => setNewEquipment({ ...newEquipment, type: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="eq-serial">Серийный номер</Label>
-                <Input
-                  id="eq-serial"
-                  placeholder="ЦН-400-2023-1547"
-                  value={newEquipment.serialNumber}
-                  onChange={(e) => setNewEquipment({ ...newEquipment, serialNumber: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="eq-manufacturer">Производитель</Label>
-                <Input
-                  id="eq-manufacturer"
-                  placeholder="Название компании"
-                  value={newEquipment.manufacturer}
-                  onChange={(e) => setNewEquipment({ ...newEquipment, manufacturer: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="eq-location">Местоположение</Label>
-                <Input
-                  id="eq-location"
-                  placeholder="Цех №3, участок А"
-                  value={newEquipment.location}
-                  onChange={(e) => setNewEquipment({ ...newEquipment, location: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="eq-date">Дата установки</Label>
-                <Input
-                  id="eq-date"
-                  type="date"
-                  value={newEquipment.installDate}
-                  onChange={(e) => setNewEquipment({ ...newEquipment, installDate: e.target.value })}
-                />
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="eq-hours">Наработка (часы)</Label>
-              <Input
-                id="eq-hours"
-                type="number"
-                placeholder="0"
-                value={newEquipment.operatingHours}
-                onChange={(e) => setNewEquipment({ ...newEquipment, operatingHours: parseInt(e.target.value) || 0 })}
-              />
-            </div>
-            <div className="flex justify-end gap-3">
-              <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                Отмена
-              </Button>
-              <Button onClick={handleAddEquipment}>Добавить</Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <EquipmentInfoDialog
+        isOpen={isInfoDialogOpen}
+        onClose={() => setIsInfoDialogOpen(false)}
+        equipmentData={scannedEquipmentData}
+      />
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Паспорт оборудования</DialogTitle>
