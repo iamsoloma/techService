@@ -126,7 +126,7 @@ export function MaintenancePlanning() {
     <div>
       <div className="mb-6">
         <h2 className="text-gray-900 mb-2">Планирование технического обслуживания</h2>
-        <p className="text-gray-600">��алендарь работ и назначение бригад</p>
+        <p className="text-gray-600">Календарь работ и назначение бригад</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
